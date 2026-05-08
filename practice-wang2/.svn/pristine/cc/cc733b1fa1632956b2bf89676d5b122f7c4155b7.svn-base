@@ -1,0 +1,64 @@
+package com.example.manage2.controller;
+
+import com.example.manage2.common.Result;
+import com.example.manage2.dto.LoginDTO;
+import com.example.manage2.entity.SysUser;
+import com.example.manage2.service.SysUserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/user")
+@CrossOrigin
+public class SysUserController {
+
+    @Autowired
+    private SysUserService sysUserService;
+
+    @PostMapping("/login")
+    public Result<Map<String, Object>> login(@RequestBody LoginDTO loginDTO) {
+        if (loginDTO.getUsername() == null || loginDTO.getPassword() == null) {
+            return Result.error("用户名或密码不能为空");
+        }
+
+        try {
+            Map<String, Object> tokenInfo = sysUserService.login(loginDTO);
+            return Result.success(tokenInfo, "登录成功");
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/register")
+    public Result<String> register(@RequestBody SysUser user) {
+        if (user.getUsername() == null || user.getPassword() == null || user.getRealName() == null) {
+            return Result.error("账号、密码和真实姓名不能为空");
+        }
+        try {
+            sysUserService.register(user);
+            return Result.success(null, "注册成功");
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取用户列表
+     */
+    @GetMapping("/list")
+    public Result<List<SysUser>> getUserList() {
+        return Result.success(sysUserService.list());
+    }
+
+    /**
+     * 获取系统中所有可用的用户列表，供前端选择负责人与参与人
+     */
+    @GetMapping("/all")
+    public Result<List<SysUser>> getAllUsers() {
+        // 现在这里调用 sysUserService.list() 不会报错了
+        return Result.success(sysUserService.list());
+    }
+}

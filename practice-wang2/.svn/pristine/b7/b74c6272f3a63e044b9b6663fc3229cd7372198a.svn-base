@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.manage2.mapper.SysUserMapper">
+
+    <select id="findByUsername" resultType="com.example.manage2.entity.SysUser">
+        SELECT
+            "id",
+            "username",
+            "password",
+            "real_name" AS realName,
+            "status",
+            "create_time" AS createTime
+        FROM "sys_user"
+        WHERE "username" = #{username}
+    </select>
+
+    <insert id="insertUser" parameterType="com.example.manage2.entity.SysUser" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO "sys_user" (
+            "username", "password", "real_name", "status", "create_time"
+        )
+        VALUES (
+                   #{username}, #{password}, #{realName}, #{status}, #{createTime}
+               )
+    </insert>
+
+    <select id="findAllNormalUsers" resultType="com.example.manage2.entity.SysUser">
+        SELECT
+            "id",
+            "username",
+            "real_name" AS realName
+        FROM "sys_user"
+        WHERE "status" = 1
+    </select>
+
+    <select id="findIdByRealName" resultType="java.lang.Long">
+        SELECT "id"
+        FROM "sys_user"
+        WHERE "real_name" = #{realName}
+            LIMIT 1
+    </select>
+
+</mapper>

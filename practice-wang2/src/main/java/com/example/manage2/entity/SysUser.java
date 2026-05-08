@@ -1,0 +1,15 @@
+package com.example.manage2.entity;
+
+import lombok.Data;
+
+import java.util.Date;
+
+@Data
+public class SysUser {
+    private Long id;
+    private String username;
+    private String password;
+    private String realName; // 对应数据库的 real_name
+    private Integer status;
+    private Date createTime; // 对应数据库的 create_time
+}

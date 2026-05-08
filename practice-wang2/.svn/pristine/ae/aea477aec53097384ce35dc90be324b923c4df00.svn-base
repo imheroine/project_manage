@@ -1,0 +1,22 @@
+package com.example.manage2.mapper;
+
+import com.example.manage2.entity.SysUser;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+
+@Mapper
+public interface SysUserMapper {
+
+    /**
+     * 根据登录账号查询用户信息
+     */
+    SysUser findByUsername(@Param("username") String username);
+
+    void insertUser(SysUser user);
+
+    // 核心修复：删除了这里的 @Select 注解，防止和 XML 里的配置冲突导致启动失败！
+    List<SysUser> findAllNormalUsers();
+
+}

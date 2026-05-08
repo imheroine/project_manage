@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.manage2.mapper.ProjectMasterPlanMapper">
+
+    <select id="findAllActive" resultType="com.example.manage2.entity.ProjectMasterPlan">
+        SELECT
+        p."id", p."project_year" AS projectYear, p."project_type" AS projectType,
+        p."project_code" AS projectCode, p."project_name" AS projectName, p."location",
+        p."manager_id" AS managerId, p."manager_name" AS managerName,
+        p."participants", p."participant_ids" AS participantIds,
+        p."plan_start_date" AS planStartDate, p."plan_end_date" AS planEndDate,
+        p."plan_days" AS planDays, p."actual_start_date" AS actualStartDate,
+        p."actual_end_date" AS actualEndDate, p."actual_days" AS actualDays,
+        p."created_by" AS createdBy, p."create_time" AS createTime
+        FROM "project_master_plan" p
+        WHERE p."is_deleted" = 0
+
+        <if test="userId != null and userId != 1">
+            AND (
+            EXISTS (
+            SELECT 1 FROM "project_member_relation" pmr
+            WHERE pmr."project_id" = p."id" AND pmr."user_id" = #{userId}
+            )
+            OR p."created_by" = #{userId}
+            )
+        </if>
+
+        <if test="startDate != null and startDate != ''">
+            AND p."plan_start_date" &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND p."plan_start_date" &lt;= #{endDate}
+        </if>
+
+        ORDER BY p."project_year" DESC, p."create_time" DESC
+    </select>
+
+    <select id="findProjectCodesByPrefix" resultType="java.lang.String">
+        SELECT "project_code"
+        FROM "project_master_plan"
+        WHERE "project_code" LIKE CONCAT(#{prefix}, '%')
+    </select>
+
+    <select id="checkExistByCode" resultType="int">
+        SELECT COUNT(1) FROM "project_master_plan"
+        WHERE "project_code" = #{projectCode} AND "is_deleted" = 0
+    </select>
+
+    <select id="findById" resultType="com.example.manage2.entity.ProjectMasterPlan">
+        SELECT * FROM "project_master_plan" WHERE "id" = #{id} AND "is_deleted" = 0
+    </select>
+
+
+    <insert id="insertProject" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO "project_master_plan" (
+            "project_year", "project_type", "project_code", "project_name", "location",
+            "manager_id", "manager_name", "participants", "participant_ids",
+            "plan_start_date", "plan_end_date", "plan_days",
+            "actual_start_date", "actual_end_date", "actual_days",
+            "created_by", "create_time"
+        )
+        VALUES (
+                   #{projectYear}, #{projectType}, #{projectCode}, #{projectName}, #{location},
+                   #{managerId}, #{managerName}, #{participants}, #{participantIds},
+                   #{planStartDate}, #{planEndDate}, #{planDays},
+                   #{actualStartDate}, #{actualEndDate}, #{actualDays},
+                   #{createdBy}, SYSDATE
+               )
+    </insert>
+
+    <update id="updateProject">
+        UPDATE "project_master_plan"
+        SET "project_year"      = #{projectYear},
+            "project_type"      = #{projectType},
+            "project_name"      = #{projectName},
+            "location"          = #{location},
+            "manager_id"        = #{managerId},
+            "manager_name"      = #{managerName},
+            "participants"      = #{participants},
+            "participant_ids"   = #{participantIds},
+            "plan_start_date"   = #{planStartDate},
+            "plan_end_date"     = #{planEndDate},
+            "plan_days"         = #{planDays},
+            "actual_start_date" = #{actualStartDate},
+            "actual_end_date"   = #{actualEndDate},
+            "actual_days"       = #{actualDays}
+        WHERE "id" = #{id}
+    </update>
+
+    <delete id="deleteProjectById">
+        DELETE FROM "project_master_plan"
+        WHERE "id" = #{id}
+    </delete>
+
+</mapper>

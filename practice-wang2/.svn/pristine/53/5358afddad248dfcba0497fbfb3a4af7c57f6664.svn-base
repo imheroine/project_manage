@@ -1,0 +1,12 @@
+package com.example.manage2.service;
+
+import com.example.manage2.dto.LoginDTO;
+import com.example.manage2.entity.SysUser;
+
+import java.util.Map;
+
+public interface SysUserService {
+    //定义登录方法
+    Map<String, Object> login(LoginDTO loginDTO);
+    void register(SysUser user);
+}

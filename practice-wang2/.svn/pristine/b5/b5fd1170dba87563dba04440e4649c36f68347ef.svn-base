@@ -1,0 +1,8 @@
+com\example\manage2\service\Impl\TaskServiceImplTest.class
+com\example\manage2\controller\TaskControllerTest.class
+com\example\manage2\service\Impl\ProjectServiceImplTest.class
+com\example\manage2\controller\SysUserControllerTest.class
+com\example\manage2\Manage2ApplicationTests.class
+com\example\manage2\controller\ProjectControllerTest.class
+com\example\manage2\BaseTest.class
+com\example\manage2\service\Impl\SysUserServiceImplTest.class

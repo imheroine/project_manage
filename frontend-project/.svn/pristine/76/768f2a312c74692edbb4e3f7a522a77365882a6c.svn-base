@@ -1,0 +1,56 @@
+import axios from 'axios'
+import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import { ElMessage } from 'element-plus'
+import router from '../router'
+import { useUserStore } from '../store/user'
+
+const request: AxiosInstance = axios.create({
+    baseURL: '/', // Vite 代理相对路径
+    timeout: 5000
+})
+
+const http = {
+    get: (url: string, config?: any) => request.get(url, config),
+    post: (url: string, data?: any, config?: any) => request.post(url, data, config),
+    put: (url: string, data?: any, config?: any) => request.put(url, data, config),
+    delete: (url: string, config?: any) => request.delete(url, config)
+}
+
+request.interceptors.request.use(
+    (config: InternalAxiosRequestConfig) => {
+        const userStore = useUserStore()
+        if (userStore.token && config.headers) {
+            config.headers['Authorization'] = userStore.token
+        }
+        return config
+    },
+    (error) => Promise.reject(error)
+)
+
+request.interceptors.response.use(
+    (response) => {
+        const res = response.data
+        // 核心修复：精准判断是否为鉴权接口（放行注册和登录，不拦截401）
+        const isAuthApi = response.config.url?.includes('/login') || response.config.url?.includes('/register');
+
+        if (res.code === 401 && !isAuthApi) {
+            const userStore = useUserStore()
+            ElMessage.warning('未登录或登录已过期，请重新登录')
+            userStore.clearInfo()
+            router.push('/login')
+            return Promise.reject(new Error('未登录'))
+        }
+
+        if (res.code !== 200) {
+            ElMessage.error(res.message || '操作失败')
+            return Promise.reject(new Error(res.message))
+        }
+        return res
+    },
+    (error) => {
+        ElMessage.error('网络连接异常，请检查后端服务')
+        return Promise.reject(error)
+    }
+)
+
+export default http

@@ -1,0 +1,51 @@
+package com.example.manage2.utils;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+
+import java.util.Date;
+
+public class JwtUtils {
+
+    // 密钥
+    private static final String SECRET = "ProjectMasterPlanSystemSecretKey2026";
+    // 过期时间 (这里设置 24 小时)
+    private static final long EXPIRE = 24 * 60 * 60 * 1000;
+
+    /**
+     * 生成 JWT
+     *
+     * @param userId   用户ID
+     * @param username 账号
+     * @return Token 字符串
+     */
+    public static String generateToken(Long userId, String username) {
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + EXPIRE);
+
+        return Jwts.builder()
+                .setHeaderParam("type", "JWT")
+                .setSubject(username) // 主题通常放账号
+                .claim("userId", userId) // 存放自定义数据
+                .setIssuedAt(now)
+                .setExpiration(expiration)
+                .signWith(SignatureAlgorithm.HS512, SECRET)
+                .compact();
+    }
+
+    /**
+     * 解析 JWT，获取其内部的数据 (Claims)
+     */
+    public static Claims getClaimsByToken(String token) {
+        try {
+            return Jwts.parser()
+                    .setSigningKey(SECRET)
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (Exception e) {
+            // 如果解析失败（如 token 被篡改或过期），会走这里
+            return null;
+        }
+    }
+}

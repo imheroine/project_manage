@@ -1,0 +1,72 @@
+package com.example.manage2.entity;
+
+import com.alibaba.excel.annotation.ExcelIgnore;
+import com.alibaba.excel.annotation.ExcelProperty;
+import lombok.Data;
+
+import java.util.Date;
+
+@Data
+public class ProjectMasterPlan {
+    @ExcelIgnore // 导出时不包含内部 ID
+    private Long id;
+
+    @ExcelProperty("所属年度")
+    private Integer projectYear;
+
+    @ExcelProperty("项目类型")
+    private String projectType;
+
+    @ExcelProperty("项目编号")
+    private String projectCode;
+
+    @ExcelProperty("项目名称")
+    private String projectName;
+
+    @ExcelProperty("项目地点")
+    private String location;
+
+    @ExcelIgnore // 内部 ID 不导出
+    private String managerId;
+
+    @ExcelProperty("项目负责人")
+    private String managerName;
+
+    @ExcelProperty("项目参与人")
+    private String participants;
+
+    @ExcelIgnore
+    private String participantIds;
+
+    @ExcelProperty("计划开始日期")
+    private Date planStartDate;
+
+    @ExcelProperty("计划结束日期")
+    private Date planEndDate;
+
+    @ExcelProperty("计划天数")
+    private Integer planDays;
+
+    @ExcelProperty("实际开始日期")
+    private Date actualStartDate;
+
+    @ExcelProperty("实际结束日期")
+    private Date actualEndDate;
+
+    @ExcelProperty("实际天数")
+    private Integer actualDays;
+
+    @ExcelIgnore
+    private Long createdBy;
+
+    @ExcelIgnore
+    private Date createTime;
+
+    @ExcelIgnore
+    private Integer isDeleted;
+
+    // 核心：当前登录用户在该项目中的角色 (1:项目管理员, 2:项目普通成员, null:未参与)
+    // 此字段只用于前端权限判断，不对应 master_plan 表中的列
+    @ExcelIgnore
+    private Integer currentUserRole;
+}

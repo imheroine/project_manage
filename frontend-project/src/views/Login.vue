@@ -1,0 +1,97 @@
+<script setup lang="ts">
+import {reactive, ref} from 'vue'
+//@ts-ignore
+import {useRouter} from 'vue-router'
+import {ElMessage} from 'element-plus'
+import request from '../utils/request'
+import {useUserStore} from '../store/user'
+
+const router = useRouter()
+const userStore = useUserStore()
+const loginFormRef = ref<any>(null)
+const loading = ref(false)
+
+const loginForm = reactive({username: '', password: ''})
+const rules = reactive({
+    username: [{required: true, message: '账号不能为空', trigger: 'blur'}],
+    password: [{required: true, message: '密码不能为空', trigger: 'blur'}]
+})
+
+const handleLogin = () => {
+    loginFormRef.value.validate((valid: boolean) => {
+        if (valid) {
+            loading.value = true
+            request.post('/api/user/login', loginForm).then((res: any) => {
+                ElMessage.success(res.message || '登录成功')
+                // 核心修复：补上第三个参数 res.data.userId ！！！
+                userStore.setInfo(res.data.token, res.data.realName, res.data.userId)
+                router.push('/')
+            }).finally(() => {
+                loading.value = false
+            })
+        }
+    })
+}
+</script>
+
+<template>
+  <div class="login-container">
+    <div class="login-box">
+      <h2 class="title">系统登录</h2>
+      <el-form :model="loginForm" :rules="rules" ref="loginFormRef" @keyup.enter="handleLogin">
+        <el-form-item prop="username">
+          <el-input v-model="loginForm.username" placeholder="请输入账号" clearable>
+            <template #prefix>
+              <el-icon>
+                <User/>
+              </el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="password">
+          <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" show-password>
+            <template #prefix>
+              <el-icon>
+                <Lock/>
+              </el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <div style="text-align: right; margin-bottom: 15px;">
+          <el-link type="primary" @click="$router.push('/register')">没有账号？去注册</el-link>
+        </div>
+        <el-form-item>
+          <el-button type="primary" class="login-btn" :loading="loading" @click="handleLogin">登 录</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.login-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #2d3a4b;
+}
+
+.login-box {
+  width: 350px;
+  padding: 40px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.login-btn {
+  width: 100%;
+}
+</style>

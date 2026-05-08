@@ -1,0 +1,18 @@
+package com.example.manage2.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new JwtInterceptor())
+                // 拦截所有 /api 开头的后端请求路径
+                .addPathPatterns("/api/**")
+                // 排除登录接口，因为登录时还没有 Token
+                .excludePathPatterns("/api/login","/api/register");
+    }
+}

@@ -1,0 +1,20 @@
+package com.example.manage2.mapper;
+
+import com.example.manage2.entity.SysUser;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+@Mapper
+public interface SysUserMapper {
+
+    /**
+     * 根据登录账号查询用户信息
+     *
+     * @param username 前端传来的账号
+     * @return 包含密码等信息的 SysUser 实体
+     */
+    SysUser findByUsername(@Param("username") String username);
+
+    void insertUser(SysUser user);
+
+}

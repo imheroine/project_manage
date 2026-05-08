@@ -1,0 +1,124 @@
+<script setup lang="ts">
+import {reactive, ref} from 'vue'
+//@ts-ignore
+import {useRouter} from 'vue-router'
+import {ElMessage} from 'element-plus'
+import request from '../utils/request'
+
+const router = useRouter()
+const regFormRef = ref<any>(null)
+const loading = ref(false)
+
+const regForm = reactive({username: '', realName: '', password: '', confirmPassword: ''})
+
+const validatePass2 = (rule: any, value: string, callback: any) => {
+  if (value === '') callback(new Error('请再次输入密码'))
+  else if (value !== regForm.password) callback(new Error('两次输入不一致'))
+  else callback()
+}
+
+const rules = reactive({
+  username: [{required: true, message: '账号不能为空', trigger: 'blur'}],
+  realName: [{required: true, message: '真实姓名不能为空', trigger: 'blur'}],
+  password: [{required: true, message: '密码不能为空', trigger: 'blur'}],
+  confirmPassword: [{required: true, validator: validatePass2, trigger: 'blur'}]
+})
+
+const handleRegister = () => {
+  regFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      loading.value = true
+      request.post('/api/register', {
+        username: regForm.username,
+        password: regForm.password,
+        realName: regForm.realName
+      }).then(() => {
+        ElMessage.success('注册成功，请登录')
+        router.push('/login')
+      }).finally(() => {
+        loading.value = false
+      })
+    }
+  })
+}
+</script>
+
+<template>
+  <div class="login-container">
+    <div class="login-box">
+      <h2 class="title">注册新账号</h2>
+      <el-form :model="regForm" :rules="rules" ref="regFormRef">
+        <el-form-item prop="username">
+          <el-input v-model="regForm.username" placeholder="请输入登录账号" clearable>
+            <template #prefix>
+              <el-icon>
+                <User/>
+              </el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="realName">
+          <el-input v-model="regForm.realName" placeholder="请输入您的真实姓名" clearable>
+            <template #prefix>
+              <el-icon>
+                <Postcard/>
+              </el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="password">
+          <el-input v-model="regForm.password" type="password" placeholder="请输入密码" show-password>
+            <template #prefix>
+              <el-icon>
+                <Lock/>
+              </el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="confirmPassword">
+          <el-input v-model="regForm.confirmPassword" type="password" placeholder="请确认密码" show-password>
+            <template #prefix>
+              <el-icon>
+                <Lock/>
+              </el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <div style="text-align: right; margin-bottom: 15px;">
+          <el-link type="primary" @click="$router.push('/login')">已有账号？去登录</el-link>
+        </div>
+        <el-form-item>
+          <el-button type="success" class="login-btn" :loading="loading" @click="handleRegister">立即注册</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.login-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #2d3a4b;
+}
+
+.login-box {
+  width: 350px;
+  padding: 40px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.login-btn {
+  width: 100%;
+}
+</style>

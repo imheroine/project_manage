@@ -1,0 +1,123 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+
+const router = useRouter()
+// 从本地存储获取登录人的真实姓名
+const realName = ref(localStorage.getItem('realName') || '用户')
+
+// 退出登录逻辑
+const handleLogout = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('realName')
+  ElMessage.success('已安全退出')
+  router.push('/login')
+}
+</script>
+
+<template>
+  <el-container class="layout-container">
+    <el-aside width="220px" class="aside">
+      <div class="logo">项目计划管理系统</div>
+      <el-menu
+          :default-active="$route.path"
+          router
+          class="el-menu-vertical"
+          background-color="#304156"
+          text-color="#bfcbd9"
+          active-text-color="#409eff"
+      >
+        <el-menu-item index="/plan/master">
+          <el-icon>
+            <Menu/>
+          </el-icon>
+          <span>项目总计划</span>
+        </el-menu-item>
+        <el-menu-item index="/plan/dev">
+          <el-icon>
+            <Monitor/>
+          </el-icon>
+          <span>开发计划</span>
+        </el-menu-item>
+        <el-menu-item index="/plan/weekly">
+          <el-icon>
+            <Calendar/>
+          </el-icon>
+          <span>周计划</span>
+        </el-menu-item>
+      </el-menu>
+    </el-aside>
+
+    <el-container>
+      <el-header class="header">
+        <div class="header-left">
+          <el-icon class="toggle-btn">
+            <Fold/>
+          </el-icon>
+        </div>
+        <div class="header-right">
+          <span class="user-name">欢迎您，{{ realName }}</span>
+          <el-button type="danger" size="small" plain @click="handleLogout">退出登录</el-button>
+        </div>
+      </el-header>
+
+      <el-main class="main">
+        <router-view/>
+      </el-main>
+    </el-container>
+  </el-container>
+</template>
+
+<style scoped>
+.layout-container {
+  height: 100vh;
+}
+
+.aside {
+  background-color: #304156;
+}
+
+.logo {
+  height: 60px;
+  line-height: 60px;
+  text-align: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
+  background-color: #2b3649;
+}
+
+.el-menu-vertical {
+  border-right: none;
+}
+
+.header {
+  background-color: #fff;
+  border-bottom: 1px solid #e6e6e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle-btn {
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-name {
+  margin-right: 15px;
+  color: #333;
+  font-size: 14px;
+}
+
+.main {
+  background-color: #f0f2f5;
+  padding: 20px;
+}
+</style>

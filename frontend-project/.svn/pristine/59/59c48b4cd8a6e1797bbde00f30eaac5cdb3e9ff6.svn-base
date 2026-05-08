@@ -1,0 +1,28 @@
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+
+export const useUserStore = defineStore('user', () => {
+    const token = ref(localStorage.getItem('token') || '')
+    const realName = ref(localStorage.getItem('realName') || '')
+    // 核心：只需记录 userId 即可
+    const userId = ref(Number(localStorage.getItem('userId')) || null)
+
+    const setInfo = (newToken: string, name: string, id: number) => {
+        token.value = newToken
+        realName.value = name
+        userId.value = id
+        localStorage.setItem('token', newToken)
+        localStorage.setItem('realName', name)
+        localStorage.setItem('userId', String(id))
+    }
+
+    const clearInfo = () => {
+        token.value = ''
+        realName.value = ''
+        userId.value = null
+        localStorage.clear()
+    }
+
+    // 移除了不安全的 isAdmin 判断，全权交由后端的 member_role
+    return { token, realName, userId, setInfo, clearInfo }
+})

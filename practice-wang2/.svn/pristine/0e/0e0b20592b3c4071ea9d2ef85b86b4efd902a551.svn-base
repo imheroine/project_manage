@@ -1,0 +1,31 @@
+package com.example.manage2.entity;
+
+import lombok.Data;
+
+import java.util.Date;
+
+@Data
+public class ProjectMasterPlan {
+    private Long id;
+    private Integer projectYear;
+    private String projectType;
+    private String projectCode;
+    private String projectName;
+    private String location;
+    private String managerId;
+    private String managerName;
+    private String participants;
+    private String participantIds;
+    private Date planStartDate;
+    private Date planEndDate;
+    private Integer planDays;
+    private Date actualStartDate;
+    private Date actualEndDate;
+    private Integer actualDays;
+    private Long createdBy;
+    private Date createTime;
+    private Integer isDeleted;
+    // 核心：当前登录用户在该项目中的角色 (1:项目管理员, 2:项目普通成员, null:未参与)
+    // 此字段只用于前端权限判断，不对应 master_plan 表中的列
+    private Integer currentUserRole;
+}

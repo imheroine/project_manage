@@ -1,0 +1,720 @@
+<template>
+    <el-config-provider :locale="zhCn">
+        <el-container class="project-layout">
+            <el-aside :width="isTreeVisible ? '280px' : '0px'" class="tree-aside">
+                <div class="tree-header" v-show="isTreeVisible">
+                    <span>项目导航树</span>
+                </div>
+                <div class="tree-body" v-show="isTreeVisible">
+                    <el-input v-model="filterText" placeholder="搜索项目名称" clearable class="search-input"/>
+                    <el-tree
+                            ref="treeRef"
+                            :key="treeKey"
+                            :data="treeData"
+                            :props="defaultProps"
+                            default-expand-all
+                            highlight-current
+                            :filter-node-method="filterNode"
+                            @node-click="handleNodeClick"
+                            node-key="id"
+                    >
+                        <template #default="{ node, data }">
+              <span class="custom-tree-node">
+                <span v-if="data.isYear" class="icon">📁</span>
+                <span v-else-if="data.type === '研发项目'" class="icon">💻</span>
+                <span v-else-if="data.type === '实施项目'" class="icon">⚙️</span>
+                <span v-else-if="data.type === '维护项目'" class="icon">🔧</span>
+                <span v-else class="icon">📄</span>
+                <span class="label" :title="node.label">{{ node.label }}</span>
+              </span>
+                        </template>
+                    </el-tree>
+                </div>
+            </el-aside>
+
+            <el-main class="main-workspace">
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <el-button @click="toggleTree" :icon="isTreeVisible ? 'Fold' : 'Expand'">
+                            {{ isTreeVisible ? '隐藏导航' : '展开导航' }}
+                        </el-button>
+                    </div>
+                    <div class="toolbar-right">
+                        <el-button type="success" icon="Plus" @click="handleAddProject">添加项目</el-button>
+                        <el-button type="warning" icon="Edit" :disabled="!currentProject" @click="handleEditProject">
+                            编辑项目
+                        </el-button>
+                        <el-button type="danger" icon="Delete" :disabled="!currentProject" @click="handleDeleteProject">
+                            删除项目
+                        </el-button>
+                    </div>
+                </div>
+
+                <div class="workspace-content" v-loading="loading">
+                    <template v-if="currentProject">
+                        <div class="info-section">
+                            <div class="section-title">项目整体情况</div>
+                            <el-descriptions border :column="2" size="default"
+                                             :label-style="{ width: '140px', 'justify-content': 'center' }"
+                                             :content-style="{ width: 'auto' }">
+                                <el-descriptions-item label="年度">{{ currentProject.projectYear }}</el-descriptions-item>
+                                <el-descriptions-item label="项目编号">{{
+                                        currentProject.projectCode
+                                    }}
+                                </el-descriptions-item>
+                                <el-descriptions-item label="项目名称"><span
+                                        class="project-name-text">{{ currentProject.projectName }}</span>
+                                </el-descriptions-item>
+                                <el-descriptions-item label="项目类型">
+                                    <el-tag size="small">{{ currentProject.projectType }}</el-tag>
+                                </el-descriptions-item>
+                                <el-descriptions-item label="负责人">{{
+                                        currentProject.managerName || '-'
+                                    }}
+                                </el-descriptions-item>
+                                <el-descriptions-item label="项目地点">{{
+                                        currentProject.location || '-'
+                                    }}
+                                </el-descriptions-item>
+                                <el-descriptions-item label="计划开始">{{
+                                        formatDate(currentProject.planStartDate)
+                                    }}
+                                </el-descriptions-item>
+                                <el-descriptions-item label="计划结束">{{
+                                        formatDate(currentProject.planEndDate)
+                                    }}
+                                </el-descriptions-item>
+                                <el-descriptions-item label="计划天数"><span v-if="currentProject.planDays"
+                                                                         class="days-highlight">{{
+                                        currentProject.planDays
+                                    }} 天</span><span v-else>-</span></el-descriptions-item>
+                                <el-descriptions-item label="参与人员">{{
+                                        currentProject.participants || '-'
+                                    }}
+                                </el-descriptions-item>
+                            </el-descriptions>
+                        </div>
+
+                        <div class="info-section">
+                            <div class="section-title" style="display: flex; justify-content: space-between;">
+                                <span>项目阶段与任务</span>
+                                <el-button type="primary" size="small" icon="Plus" @click="handleAddTask">添加阶段/任务
+                                </el-button>
+                            </div>
+                            <el-table :data="stageTasks" border size="small" style="width: 100%"
+                                      empty-text="该项目暂无任务，请点击右上方添加">
+                                <el-table-column prop="stageDictCode" label="阶段名称" width="120"/>
+                                <el-table-column prop="taskName" label="任务名称" min-width="150" show-overflow-tooltip/>
+                                <el-table-column label="计划开始" width="100">
+                                    <template #default="scope">{{ formatDate(scope.row.planStartDate) }}</template>
+                                </el-table-column>
+                                <el-table-column label="计划结束" width="100">
+                                    <template #default="scope">{{ formatDate(scope.row.planEndDate) }}</template>
+                                </el-table-column>
+                                <el-table-column prop="planWorkload" label="计划工作量" width="100"/>
+                                <el-table-column prop="responsiblePerson" label="负责人" width="100"/>
+                                <el-table-column prop="statusDictCode" label="状态" width="100">
+                                    <template #default="scope">
+                                        <el-tag :type="scope.row.statusDictCode === '已完成' ? 'success' : (scope.row.statusDictCode === '进行中' ? 'warning' : 'info')">
+                                            {{ scope.row.statusDictCode || '未开始' }}
+                                        </el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="操作" width="120" fixed="right" align="center">
+                                    <template #default="scope">
+                                        <el-button size="small" type="primary" link @click="handleEditTask(scope.row)">
+                                            编辑
+                                        </el-button>
+                                        <el-button size="small" type="danger" link
+                                                   @click="handleDeleteTask(scope.row.id)">删除
+                                        </el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                    </template>
+                    <el-empty v-else description="请从左侧项目树中选择一个项目查看"/>
+                </div>
+            </el-main>
+
+            <el-dialog :title="dialogTitle" v-model="dialogVisible" width="800px" destroy-on-close>
+                <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="project-form">
+                    <el-row :gutter="24">
+                        <el-col :span="12">
+                            <el-form-item label="所属年度" prop="projectYear">
+                                <el-input-number v-model="form.projectYear" :min="2000" :max="2100"
+                                                 style="width: 100%;"/>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="项目类型" prop="projectType">
+                                <el-select v-model="form.projectType" placeholder="请选择类型" style="width: 100%;">
+                                    <el-option label="研发项目" value="研发项目"/>
+                                    <el-option label="实施项目" value="实施项目"/>
+                                    <el-option label="维护项目" value="维护项目"/>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24">
+                        <el-col :span="12">
+                            <el-form-item label="项目编号">
+                                <el-input v-model="form.projectCode" disabled placeholder="自动生成"/>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="项目名称" prop="projectName">
+                                <el-input v-model="form.projectName" placeholder="请输入项目名称"/>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24">
+                        <el-col :span="12">
+                            <el-form-item label="项目负责人" prop="managerIdsList">
+                                <el-select v-model="form.managerIdsList" multiple filterable placeholder="可选择多名负责人"
+                                           style="width: 100%;">
+                                    <el-option v-for="user in userList" :key="user.id" :label="user.realName"
+                                               :value="user.id"/>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="项目地点" prop="location">
+                                <el-input v-model="form.location" placeholder="请输入项目地点"/>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="项目参与人" prop="participantIdsList">
+                        <el-select v-model="form.participantIdsList" multiple filterable placeholder="请选择参与人员"
+                                   style="width: 100%;">
+                            <el-option v-for="user in userList" :key="user.id" :label="user.realName" :value="user.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-row :gutter="24" class="date-row">
+                        <el-col :span="10">
+                            <el-form-item label="计划开始" prop="planStartDate">
+                                <el-date-picker v-model="form.planStartDate" type="date" value-format="YYYY-MM-DD"
+                                                style="width: 100%;"/>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="10">
+                            <el-form-item label="计划结束" prop="planEndDate">
+                                <el-date-picker v-model="form.planEndDate" type="date" value-format="YYYY-MM-DD"
+                                                :disabled-date="disabledEndDate" style="width: 100%;"/>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-form-item label-width="0">
+                                <div class="plan-days-tag">共 {{ form.planDays || 0 }} 天</div>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </el-form>
+                <template #footer>
+                    <el-button @click="dialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitForm" :loading="submitLoading">确定保存</el-button>
+                </template>
+            </el-dialog>
+
+            <el-dialog :title="taskDialogTitle" v-model="taskDialogVisible" width="800px" destroy-on-close>
+                <el-form ref="taskFormRef" :model="taskForm" :rules="taskRules" label-width="110px">
+                    <el-row :gutter="24">
+                        <el-col :span="12">
+                            <el-form-item label="阶段名称" prop="stageDictCode">
+                                <el-select v-model="taskForm.stageDictCode" placeholder="请选择阶段" style="width: 100%;">
+                                    <el-option label="需求分析阶段" value="需求分析阶段"/>
+                                    <el-option label="设计开发阶段" value="设计开发阶段"/>
+                                    <el-option label="测试验收阶段" value="测试验收阶段"/>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="任务状态" prop="statusDictCode">
+                                <el-select v-model="taskForm.statusDictCode" placeholder="请选择状态" style="width: 100%;">
+                                    <el-option label="未开始" value="未开始"/>
+                                    <el-option label="进行中" value="进行中"/>
+                                    <el-option label="已完成" value="已完成"/>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-form-item label="任务名称" prop="taskName">
+                        <el-input v-model="taskForm.taskName" placeholder="请输入任务名称"/>
+                    </el-form-item>
+                    <el-row :gutter="24">
+                        <el-col :span="12">
+                            <el-form-item label="计划开始" prop="planStartDate">
+                                <el-date-picker v-model="taskForm.planStartDate" type="date" value-format="YYYY-MM-DD"
+                                                style="width: 100%;"/>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="计划结束" prop="planEndDate">
+                                <el-date-picker v-model="taskForm.planEndDate" type="date" value-format="YYYY-MM-DD"
+                                                :disabled-date="taskDisabledEndDate" style="width: 100%;"/>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24">
+                        <el-col :span="12">
+                            <el-form-item label="任务负责人" prop="responsiblePerson">
+                                <el-select v-model="taskForm.responsiblePerson" filterable placeholder="请选择"
+                                           style="width: 100%;">
+                                    <el-option v-for="user in userList" :key="user.id" :label="user.realName"
+                                               :value="user.realName"/>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="计划工作量" prop="planWorkload">
+                                <el-input-number v-model="taskForm.planWorkload" :min="0" :precision="2" :step="0.5"
+                                                 style="width: 100%;"/>
+                            </el-form-item>
+                            </el-col>
+                    </el-row>
+                    <el-form-item label="存在问题" prop="issues">
+                        <el-input v-model="taskForm.issues" type="textarea" :rows="2" placeholder="记录存在的问题"/>
+                    </el-form-item>
+                    <el-form-item label="整改措施" prop="rectificationMeasures">
+                        <el-input v-model="taskForm.rectificationMeasures" type="textarea" :rows="2"
+                                  placeholder="填写整改措施"/>
+                    </el-form-item>
+                    <el-form-item label="备注" prop="remarks">
+                        <el-input v-model="taskForm.remarks" type="textarea" :rows="1"/>
+                    </el-form-item>
+                </el-form>
+                <template #footer>
+                    <el-button @click="taskDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitTaskForm" :loading="taskSubmitLoading">确定保存</el-button>
+                </template>
+            </el-dialog>
+        </el-container>
+    </el-config-provider>
+</template>
+
+<script setup>
+import {ref, reactive, onMounted, watch} from 'vue'
+import request from '../utils/request'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {useUserStore} from '../store/user'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+
+const userStore = useUserStore()
+
+const API = {
+    LIST: '/api/project/list',
+    SAVE: '/api/project/save',
+    DELETE: '/api/project/delete',
+    USER_ALL: '/api/user/all',
+    TASK_LIST: '/api/task/list',
+    TASK_SAVE: '/api/task/save',
+    TASK_DELETE: '/api/task/delete'
+}
+
+const loading = ref(false)
+const allProjects = ref([])
+const treeData = ref([])
+const currentProject = ref(null)
+const userList = ref([])
+const stageTasks = ref([])
+
+const treeRef = ref(null)
+const treeKey = ref(0) // 🔴 核心：用于强制刷新 el-tree
+const filterText = ref('')
+const defaultProps = {children: 'children', label: 'label'}
+const isTreeVisible = ref(localStorage.getItem('projectTreeVisible') !== 'false')
+
+// =================== 项目表单 ===================
+const dialogVisible = ref(false)
+const dialogTitle = ref('')
+const submitLoading = ref(false)
+const formRef = ref(null)
+
+const form = reactive({
+    id: null, projectYear: new Date().getFullYear(), projectType: '',
+    projectCode: '', projectName: '', location: '', planStartDate: '', planEndDate: '',
+    managerIdsList: [], managerId: null, managerName: '',
+    createdBy: null, planDays: null, participantIdsList: []
+})
+
+const rules = {
+    projectYear: [{required: true, message: '必填', trigger: 'blur'}],
+    projectType: [{required: true, message: '必填', trigger: 'change'}],
+    projectName: [{required: true, message: '必填', trigger: 'blur'}],
+    managerIdsList: [{required: true, message: '请至少选择一位负责人', trigger: 'change'}]
+}
+
+const disabledEndDate = (time) => {
+    if (!form.planStartDate) return false;
+    return time.getTime() < new Date(form.planStartDate).getTime() - 8.64e7;
+}
+
+watch([() => form.planStartDate, () => form.planEndDate], ([start, end]) => {
+    if (start && end) {
+        const startD = new Date(start)
+        const endD = new Date(end)
+        form.planDays = Math.ceil(Math.abs(endD - startD) / (1000 * 60 * 60 * 24)) + 1
+    } else {
+        form.planDays = 0
+    }
+})
+
+// =================== 任务管理 ===================
+const taskDialogVisible = ref(false)
+const taskDialogTitle = ref('')
+const taskSubmitLoading = ref(false)
+const taskFormRef = ref(null)
+
+const taskForm = reactive({
+    id: null, projectId: null, stageDictCode: '', taskName: '',
+    planStartDate: '', planEndDate: '', planWorkload: 0,
+    responsiblePerson: '', statusDictCode: '未开始', issues: '',
+    rectificationMeasures: '', remarks: ''
+})
+
+const taskRules = {
+    stageDictCode: [{required: true, message: '请选择阶段', trigger: 'change'}],
+    taskName: [{required: true, message: '请输入任务名称', trigger: 'blur'}],
+    statusDictCode: [{required: true, message: '请选择状态', trigger: 'change'}]
+}
+
+const taskDisabledEndDate = (time) => {
+    if (!taskForm.planStartDate) return false;
+    return time.getTime() < new Date(taskForm.planStartDate).getTime() - 8.64e7;
+}
+
+const fetchTasks = async (projectId) => {
+    if (!projectId) return;
+    try {
+        const res = await request.get(API.TASK_LIST, {params: {projectId}})
+        stageTasks.value = res.data || []
+    } catch (error) {
+        console.error('获取任务失败')
+    }
+}
+
+const resetTaskForm = () => {
+    if (taskFormRef.value) taskFormRef.value.resetFields()
+    Object.assign(taskForm, {
+        id: null, projectId: currentProject.value?.id, stageDictCode: '', taskName: '',
+        planStartDate: '', planEndDate: '', planWorkload: 0,
+        responsiblePerson: userStore.realName || '',
+        statusDictCode: '未开始', issues: '', rectificationMeasures: '', remarks: ''
+    })
+}
+
+const handleAddTask = () => {
+    resetTaskForm();
+    taskDialogTitle.value = '新增阶段任务';
+    taskDialogVisible.value = true
+}
+
+const handleEditTask = (row) => {
+    resetTaskForm();
+    taskDialogTitle.value = '编辑阶段任务';
+    Object.assign(taskForm, row);
+    taskDialogVisible.value = true;
+}
+
+const handleDeleteTask = (id) => {
+    ElMessageBox.confirm('确定删除该任务吗？', '警告', {type: 'warning'}).then(async () => {
+        try {
+            await request.delete(`${API.TASK_DELETE}?id=${id}`)
+            ElMessage.success('删除成功');
+            fetchTasks(currentProject.value.id);
+        } catch (e) {
+            ElMessage.error('删除失败')
+        }
+    }).catch(() => {
+    })
+}
+
+const submitTaskForm = async () => {
+    if (!taskFormRef.value) return
+    await taskFormRef.value.validate(async (valid) => {
+        if (valid) {
+            taskSubmitLoading.value = true
+            try {
+                await request.post(API.TASK_SAVE, taskForm)
+                ElMessage.success('保存成功')
+                taskDialogVisible.value = false
+                fetchTasks(currentProject.value.id)
+            } catch (e) {
+                ElMessage.error('保存失败')
+            } finally {
+                taskSubmitLoading.value = false
+            }
+        }
+    })
+}
+
+// =================== 数据初始化 ===================
+const formatDate = (dateStr) => dateStr ? dateStr.split('T')[0] : '-'
+
+const fetchUserList = async () => {
+    try {
+        const res = await request.get(API.USER_ALL)
+        userList.value = res.data || []
+    } catch (error) {
+        console.error('获取用户失败')
+    }
+}
+
+const fetchData = async () => {
+    loading.value = true
+    try {
+        const userId = userStore.userId;
+        if (!userId) {
+            ElMessage.error('未获取到用户信息，请重新登录');
+            return;
+        }
+
+        const res = await request.get(API.LIST, {params: {userId: userId}})
+
+        // 🔴 核心修复：1. 强制清空旧数据 2. 切换 treeKey 触发 el-tree 组件销毁重建
+        treeData.value = [];
+        allProjects.value = [...(res.data || [])];
+        treeData.value = buildTree(allProjects.value);
+        treeKey.value += 1;
+
+        if (currentProject.value) {
+            const updated = allProjects.value.find(p => String(p.id) === String(currentProject.value.id))
+            currentProject.value = updated || null
+        }
+    } catch (error) {
+        ElMessage.error('获取项目列表失败')
+    } finally {
+        loading.value = false
+    }
+}
+
+onMounted(() => {
+    fetchData();
+    fetchUserList()
+})
+
+const resetForm = () => {
+    if (formRef.value) formRef.value.resetFields()
+    const currentUserId = userStore.userId;
+    Object.assign(form, {
+        id: null, projectYear: new Date().getFullYear(), projectType: '',
+        projectCode: '', projectName: '', location: '', planStartDate: '', planEndDate: '',
+        planDays: 0, participantIdsList: [],
+        managerIdsList: [currentUserId], managerId: null, managerName: '', createdBy: currentUserId
+    })
+}
+
+const handleAddProject = () => {
+    resetForm();
+    dialogTitle.value = '添加项目';
+    dialogVisible.value = true
+}
+
+const handleEditProject = () => {
+    resetForm()
+    dialogTitle.value = '编辑项目'
+    Object.assign(form, currentProject.value)
+    if (currentProject.value.participantIds) form.participantIdsList = currentProject.value.participantIds.split(',').map(id => Number(id))
+    if (currentProject.value.managerId) form.managerIdsList = String(currentProject.value.managerId).split(',').map(id => Number(id))
+    dialogVisible.value = true
+}
+
+const submitForm = async () => {
+    if (!formRef.value) return
+    await formRef.value.validate(async (valid) => {
+        if (valid) {
+            submitLoading.value = true
+            try {
+                const selectedManagers = userList.value.filter(u => form.managerIdsList.includes(u.id))
+                form.managerId = selectedManagers.map(u => u.id).join(',')
+                form.managerName = selectedManagers.map(u => u.realName).join(',')
+
+                const selectedParticipants = userList.value.filter(u => form.participantIdsList.includes(u.id))
+                form.participantIds = selectedParticipants.map(u => u.id).join(',')
+                form.participants = selectedParticipants.map(u => u.realName).join(',')
+
+                await request.post(API.SAVE, form)
+                ElMessage.success('操作成功')
+                dialogVisible.value = false
+                // 🔴 保存成功后，直接重新 fetch 刷新，由 treeKey 处理 UI 清理
+                await fetchData()
+            } catch (e) {
+                ElMessage.error('操作失败')
+            } finally {
+                submitLoading.value = false
+            }
+        }
+    })
+}
+
+const toggleTree = () => {
+    isTreeVisible.value = !isTreeVisible.value;
+    localStorage.setItem('projectTreeVisible', isTreeVisible.value)
+}
+watch(filterText, (val) => treeRef.value?.filter(val))
+const filterNode = (value, data) => !value ? true : data.label.includes(value)
+
+const buildTree = (data) => {
+    const map = {}
+    data.forEach(item => {
+        const year = item.projectYear || '未知'
+        if (!map[year]) map[year] = []
+        map[year].push(item)
+    })
+    const years = Object.keys(map).sort((a, b) => b - a)
+    return years.map(year => ({
+        id: `year_node_${year}`, // 🔴 使用唯一前缀
+        label: `${year}年度`,
+        isYear: true,
+        children: map[year].sort((a, b) => (a.projectCode || '').localeCompare(b.projectCode || '')).map(p => ({
+            id: `project_node_${p.id}`, // 🔴 使用唯一前缀，确保 ID 不与年度冲突
+            label: p.projectName,
+            isYear: false,
+            type: p.projectType,
+            rawData: p
+        }))
+    }))
+}
+
+const handleNodeClick = (data) => {
+    if (!data.isYear) {
+        currentProject.value = data.rawData
+        fetchTasks(data.rawData.id)
+    }
+}
+
+const handleDeleteProject = () => {
+    ElMessageBox.confirm(`确定删除项目【${currentProject.value.projectName}】吗？`, '警告', {type: 'warning'}).then(async () => {
+        try {
+            await request.delete(API.DELETE, {params: {id: currentProject.value.id}})
+            ElMessage.success('删除成功');
+            currentProject.value = null;
+            stageTasks.value = [];
+            fetchData()
+        } catch (e) {
+            ElMessage.error('删除失败')
+        }
+    })
+}
+</script>
+
+<style scoped>
+.project-layout {
+    height: calc(100vh - 84px);
+    background-color: #f5f7fa;
+    padding: 15px;
+    gap: 15px;
+}
+
+.tree-aside {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: width 0.3s;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tree-header {
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid #f0f0f0;
+    color: #303133;
+}
+
+.tree-body {
+    padding: 12px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.search-input {
+    margin-bottom: 12px;
+}
+
+.custom-tree-node {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+}
+
+.custom-tree-node .icon {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.main-workspace {
+    background: #fff;
+    border-radius: 8px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.toolbar {
+    padding: 12px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+}
+
+.workspace-content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.info-section {
+    margin-bottom: 30px;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 20px;
+    padding-left: 12px;
+    border-left: 4px solid #409EFF;
+    line-height: 1;
+}
+
+.project-name-text {
+    font-weight: 600;
+    color: #409EFF;
+    font-size: 15px;
+}
+
+.days-highlight {
+    font-weight: 600;
+    color: #e6a23c;
+}
+
+.plan-days-tag {
+    background: #fdf6ec;
+    color: #e6a23c;
+    padding: 0 15px;
+    border-radius: 4px;
+    height: 32px;
+    line-height: 32px;
+    border: 1px solid #faecd8;
+    text-align: center;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.date-row {
+    background: #fcfcfc;
+    padding: 15px 0 5px 0;
+    border-radius: 4px;
+    border: 1px dashed #dcdfe6;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-bottom: 18px;
+}
+</style>

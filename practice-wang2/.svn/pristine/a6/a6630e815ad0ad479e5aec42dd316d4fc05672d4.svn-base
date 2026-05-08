@@ -1,0 +1,48 @@
+package com.example.manage2.controller;
+
+import com.example.manage2.common.Result;
+import com.example.manage2.dto.LoginDTO;
+import com.example.manage2.entity.SysUser;
+import com.example.manage2.service.SysUserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api")
+@CrossOrigin // 开启跨域，方便前端调试
+public class SysUserController {
+
+    @Autowired
+    private SysUserService sysUserService;
+
+    @PostMapping("/login")
+    public Result<Map<String, Object>> login(@RequestBody LoginDTO loginDTO) {
+        // 校验参数不能为空
+        if (loginDTO.getUsername() == null || loginDTO.getPassword() == null) {
+            return Result.error("用户名或密码不能为空");
+        }
+
+        // 调用 Service 层进行业务逻辑处理
+        try {
+            Map<String, Object> tokenInfo = sysUserService.login(loginDTO);
+            return Result.success(tokenInfo, "登录成功");
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/register")
+    public Result<String> register(@RequestBody SysUser user) {
+        if (user.getUsername() == null || user.getPassword() == null || user.getRealName() == null) {
+            return Result.error("账号、密码和真实姓名不能为空");
+        }
+        try {
+            sysUserService.register(user);
+            return Result.success(null, "注册成功");
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+}

@@ -1,0 +1,31 @@
+<script>
+export default {
+  name: "MasterPlan"
+}
+</script>
+
+<template>
+  <div class="master-plan-container">
+    <el-row :gutter="20">
+      <el-col :span="6">
+        <el-card shadow="never" style="height: 80vh;">
+          <template #header>项目导航</template>
+          <el-tree :data="projectTree" :props="defaultProps" @node-click="handleNodeClick" />
+        </el-card>
+      </el-col>
+
+      <el-col :span="18">
+        <el-card shadow="never" style="margin-bottom: 20px;">
+          <h3>项目基本信息</h3>
+        </el-card>
+        <el-card shadow="never">
+          <h3>阶段任务明细</h3>
+        </el-card>
+      </el-col>
+    </el-row>
+  </div>
+</template>
+
+<style scoped>
+
+</style>
